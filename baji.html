@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>往昔之局 - 盲盒撕拉吧唧</title>
+    <style>
+        :root {
+            --primary: #fdfaf7;
+            --accent: #eaddcf;
+            --text: #7d6e61;
+            --box-color: #fff9f2;
+            --box-border: #e8d5c4;
+            --shadow: rgba(188, 170, 150, 0.3) 0px 15px 35px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+        body {
+            background-color: var(--primary);
+            font-family: 'Segoe UI', "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        header { margin-top: 30px; text-align: center; z-index: 10; }
+        h1 { font-weight: 300; letter-spacing: 6px; color: #a69384; font-size: 1.8rem; }
+        .subtitle { font-size: 0.7rem; color: #c8b9ad; margin-top: 5px; letter-spacing: 2px; }
+
+        /* 盲盒展示区 */
+        #display-area {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            perspective: 1200px;
+            z-index: 5;
+        }
+
+        /* 吧唧组件样式 */
+        .badge-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            animation: badgeEntry 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
+            opacity: 0;
+        }
+
+        @keyframes badgeEntry {
+            0% { transform: scale(0.5) translateY(100px) rotateX(-30deg); opacity: 0; }
+            100% { transform: scale(1) translateY(0) rotateX(0); opacity: 1; }
+        }
+
+        .badge-frame {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: #fff;
+            padding: 10px;
+            box-shadow: var(--shadow);
+            display: flex; justify-content: center; align-items: center;
+            border: 1px solid #f0e6dd;
+        }
+
+        .badge-inner {
+            position: relative;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #eee;
+        }
+
+        .result-img { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .paper-canvas { position: absolute; top: 0; left: 0; z-index: 5; cursor: crosshair; touch-action: none; }
+        .glossy {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 65%);
+            z-index: 10; pointer-events: none;
+        }
+
+        /* 底部控制栏 */
+        .controls { margin-bottom: 40px; display: flex; gap: 20px; z-index: 100; }
+        button {
+            padding: 14px 30px; border: none; background: #fff; border-radius: 30px;
+            color: #a69384; cursor: pointer; box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9rem; letter-spacing: 2px; border: 1px solid #f0e6dd;
+        }
+        button:hover { transform: translateY(-5px); background: #fdfcfb; box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+        button:active { transform: scale(0.95); }
+
+        /* --- 3D 盲盒动画系统 --- */
+        #scene-3d {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; justify-content: center; align-items: center;
+            background: rgba(253, 250, 247, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 90; perspective: 1000px;
+        }
+
+        .box-3d {
+            width: 150px; height: 150px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-20deg) rotateY(25deg);
+            transition: transform 0.5s;
+        }
+
+        .box-face {
+            position: absolute; width: 150px; height: 150px;
+            background: var(--box-color);
+            border: 2px solid var(--box-border);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 40px; box-shadow: inset 0 0 20px rgba(166,147,132,0.1);
+        }
+
+        .face-front  { transform: rotateY(0deg) translateZ(75px); }
+        .face-back   { transform: rotateY(180deg) translateZ(75px); }
+        .face-left   { transform: rotateY(-90deg) translateZ(75px); }
+        .face-right  { transform: rotateY(90deg) translateZ(75px); }
+        .face-bottom { transform: rotateX(-90deg) translateZ(75px); background: #e0d0c0; }
+        .face-top    { 
+            transform: rotateX(90deg) translateZ(75px); 
+            transform-origin: bottom;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            background: #fff;
+        }
+
+        /* 动画状态 */
+        .shaking { animation: boxShake 0.15s infinite; }
+        @keyframes boxShake {
+            0% { transform: rotateX(-20deg) rotateY(25deg) translate(2px, 0); }
+            50% { transform: rotateX(-22deg) rotateY(27deg) translate(-2px, 1px); }
+            100% { transform: rotateX(-20deg) rotateY(25deg) translate(2px, 0); }
+        }
+
+        .box-open .face-top { transform: rotateX(90deg) translateZ(75px) rotateX(-120deg); }
+        .box-open { animation: boxPop 0.5s forwards; }
+        @keyframes boxPop {
+            0% { transform: scale(1) rotateX(-20deg) rotateY(25deg); }
+            50% { transform: scale(1.2) rotateX(-10deg) rotateY(10deg); }
+            100% { transform: scale(0) rotateX(0) rotateY(360deg); opacity: 0; }
+        }
+
+        /* 装饰：丝带 */
+        .ribbon-v { position: absolute; width: 30px; height: 100%; background: #e8d5c4; left: 60px; }
+        .ribbon-h { position: absolute; width: 100%; height: 30px; background: #e8d5c4; top: 60px; }
+
+        /* 纸屑 */
+        .confetti {
+            position: absolute; width: 10px; height: 10px; z-index: 95;
+            animation: confettiFall 1.5s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>往昔之局</h1>
+        <p class="subtitle">SWEET DREAM SERIES BLIND BOX</p>
+    </header>
+
+    <div id="display-area">
+        <div style="color: #d2c5bb; letter-spacing: 2px;">准备好开启你的惊喜了吗？</div>
+    </div>
+
+    <div class="controls">
+        <button onclick="draw(1)">开启一个</button>
+        <button onclick="draw(5)">五连开启</button>
+    </div>
+
+    <!-- 3D 动画场景 -->
+    <div id="scene-3d">
+        <div id="box-container" class="box-3d">
+            <div class="box-face face-front"><div class="ribbon-v"></div>🎁</div>
+            <div class="box-face face-back"><div class="ribbon-v"></div></div>
+            <div class="box-face face-left"><div class="ribbon-h"></div></div>
+            <div class="box-face face-right"><div class="ribbon-h"></div></div>
+            <div class="box-face face-bottom"></div>
+            <div class="box-face face-top">
+                <div class="ribbon-v" style="left:60px; height:150px"></div>
+                <div class="ribbon-h" style="top:60px; width:150px"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const styles = [
+        { name: "1", img: "1.jpg", color: "#f8d7da" },
+        { name: "2", img: "2.jpg", color: "#d1ecf1" },
+        { name: "3", img: "3.jpg", color: "#d4edda" },
+        { name: "4", img: "4.jpg", color: "#fff3cd" },
+        { name: "5", img: "5.jpg", color: "#e2e3e5" },
+        { name: "6", img: "6.jpg", color: "#f3e5f5" },
+        { name: "7", img: "7.jpg", color: "#e8f5e9" },
+        { name: "8", img: "8.jpg", color: "#fffde7" },
+        { name: "9", img: "9.jpg", color: "#f0f4c3" },
+        { name: "10", img: "10.jpg", color: "#efebe9" }
+    ];
+
+    const displayArea = document.getElementById('display-area');
+    const scene3d = document.getElementById('scene-3d');
+    const boxContainer = document.getElementById('box-container');
+
+    // 抽奖主逻辑
+    function draw(count) {
+        displayArea.innerHTML = '';
+        scene3d.style.display = 'flex';
+        boxContainer.className = 'box-3d shaking';
+
+        // 1. 抖动阶段
+        setTimeout(() => {
+            boxContainer.classList.remove('shaking');
+            boxContainer.classList.add('box-open');
+            
+            // 2. 喷射纸屑
+            createConfetti();
+
+            // 3. 结果呈现
+            setTimeout(() => {
+                scene3d.style.display = 'none';
+                boxContainer.classList.remove('box-open');
+                
+                for(let i=0; i<count; i++) {
+                    const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+                    createBadge(randomStyle, i * 150); // 增加延迟入场
+                }
+            }, 600);
+        }, 1500);
+    }
+
+    // 喷射纸屑特效
+    function createConfetti() {
+        for (let i = 0; i < 50; i++) {
+            const el = document.createElement('div');
+            el.className = 'confetti';
+            el.style.left = '50%';
+            el.style.top = '50%';
+            el.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 80%)`;
+            const dx = (Math.random() - 0.5) * 600 + 'px';
+            const dy = (Math.random() - 0.5) * 600 - 200 + 'px';
+            el.style.setProperty('--dx', dx);
+            el.style.setProperty('--dy', dy);
+            scene3d.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+    }
+
+    function createBadge(style, delay) {
+        setTimeout(() => {
+            const container = document.createElement('div');
+            container.className = 'badge-container';
+            const badgeId = 'badge-' + Math.random().toString(36).substr(2, 9);
+            
+            container.innerHTML = `
+                <div class="badge-frame">
+                    <div class="badge-inner">
+                        <div style="width:100%;height:100%;background:${style.color};display:flex;align-items:center;justify-content:center;font-size:40px;color:rgba(0,0,0,0.1);position:absolute">?</div>
+                        <img class="result-img" src="${style.img}" onerror="this.style.display='none'">
+                        <canvas id="${badgeId}" class="paper-canvas" width="220" height="220"></canvas>
+                        <div class="glossy"></div>
+                    </div>
+                </div>
+            `;
+            displayArea.appendChild(container);
+            initTearLogic(badgeId);
+        }, delay);
+    }
+
+    // 核心撕拉逻辑
+    function initTearLogic(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = 220;
+        
+        let isPressed = false;
+        let lastPos = null;
+        let currentRadius = 15;
+
+        function initPaper() {
+            ctx.fillStyle = '#f4f1ea'; 
+            ctx.fillRect(0, 0, size, size);
+            // 纤维纹理
+            for(let i=0; i<300; i++) {
+                ctx.fillStyle = `rgba(0,0,0,${Math.random()*0.03})`;
+                ctx.fillRect(Math.random()*size, Math.random()*size, 1.2, 1.2);
+            }
+            // 提示标记
+            ctx.strokeStyle = "#e8dacc";
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2.5, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.fillStyle = "#bcaaa4";
+            ctx.font = "bold 12px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("TAP & TEAR", size/2, size/2 + 5);
+        }
+
+        function getJaggedPath(x, y, radius) {
+            const points = [];
+            const segments = 12;
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const r = radius * (0.85 + Math.random() * 0.3);
+                points.push({ x: x + Math.cos(angle) * r, y: y + Math.sin(angle) * r });
+            }
+            return points;
+        }
+
+        function tear(x, y, targetRadius) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop'; 
+            ctx.fillStyle = '#ffffff'; 
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            
+            const whiteEdgeRadius = targetRadius + 3;
+            const outerPath = getJaggedPath(x, y, whiteEdgeRadius);
+            ctx.beginPath();
+            ctx.moveTo(outerPath[0].x, outerPath[0].y);
+            outerPath.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = 'destination-out';
+            const innerPath = getJaggedPath(x, y, targetRadius);
+            ctx.beginPath();
+            ctx.moveTo(innerPath[0].x, innerPath[0].y);
+            innerPath.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        const handleInteract = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            if (lastPos) {
+                const dx = x - lastPos.x;
+                const dy = y - lastPos.y;
+                const dist = Math.hypot(dx, dy);
+                let targetR = 20 - Math.min(dist * 0.4, 12); 
+                currentRadius += (targetR - currentRadius) * 0.3;
+                const steps = Math.ceil(dist / 3); 
+                for(let i=0; i<steps; i++) {
+                    const lerpX = lastPos.x + (dx * (i / steps));
+                    const lerpY = lastPos.y + (dy * (i / steps));
+                    tear(lerpX, lerpY, currentRadius + (Math.random()-0.5)*2);
+                }
+            } else {
+                tear(x, y, 18);
+            }
+            lastPos = { x, y };
+        };
+
+        canvas.addEventListener('mousedown', (e) => { isPressed = true; handleInteract(e); });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isPressed = true; handleInteract(e); });
+        window.addEventListener('mousemove', (e) => { if (isPressed) handleInteract(e); });
+        window.addEventListener('touchmove', (e) => { if (isPressed) handleInteract(e); });
+        window.addEventListener('mouseup', () => { isPressed = false; lastPos = null; });
+        window.addEventListener('touchend', () => { isPressed = false; lastPos = null; });
+
+        initPaper();
+    }
+</script>
+</body>
+</html>
