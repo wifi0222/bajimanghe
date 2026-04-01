@@ -3,1330 +3,443 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>气象预测可视化平台</title>
-    <!-- 外部资源 -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-   <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- 新增：引入ECharts地图数据 -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts/map/js/world.js"></script>
-    <!-- 备用：如果上面的链接失效，使用这个 -->
-    <script src="https://echarts.apache.org/examples/vendors/echarts/map/js/world.js"></script>
-    <!-- 自定义样式 -->
+    <title>往昔之局 - 盲盒撕拉吧唧</title>
     <style>
         :root {
-            --primary: #165DFF;
-            --secondary: #0FC6C2;
-            --accent: #722ED1;
-            --dark: #1D2129;
-            --light: #F2F3F5;
-            --success: #00B42A;
-            --warning: #FF7D00;
-            --danger: #F53F3F;
-            --gray-100: #F7F8FA;
-            --gray-200: #E5E6EB;
-            --gray-300: #C9CDD4;
-            --gray-400: #86909C;
-            --gray-500: #4E5969;
-            --gray-600: #272E3B;
-            --gray-700: #1D2129;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --radius: 8px;
-            --transition: all 0.3s ease;
+            --primary: #fdfaf7;
+            --accent: #eaddcf;
+            --text: #7d6e61;
+            --box-color: #fff9f2;
+            --box-border: #e8d5c4;
+            --shadow: rgba(188, 170, 150, 0.3) 0px 15px 35px;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
         body {
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-            color: var(--light);
-            overflow: hidden;
-            height: 100vh;
-        }
-        
-        #app {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        
-        /* 顶部导航栏 */
-        .navbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.8rem 2rem;
-            background: rgba(17, 24, 39, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            z-index: 100;
-        }
-        
-        .navbar-title {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--secondary);
-        }
-        
-        .navbar-title i {
-            font-size: 1.5rem;
-        }
-        
-        .view-controls {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .view-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: var(--light);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .view-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--secondary);
-        }
-        
-        .view-btn.active {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-        
-        /* 主内容区 */
-        .main-content {
-            display: flex;
-            flex: 1;
-            position: relative;
-        }
-        
-        /* 左侧控制面板 */
-        .control-panel {
-            width: 320px;
-            background: rgba(17, 24, 39, 0.85);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 1.5rem;
-            overflow-y: auto;
-            z-index: 10;
-        }
-        
-        .control-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .control-label {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--secondary);
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .variable-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .var-tab {
-            padding: 0.5rem 0.8rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 0.8rem;
-            border: 1px solid transparent;
-        }
-        
-        .var-tab:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-        
-        .var-tab.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-        
-        .time-slider-container {
-            width: 100%;
-            margin: 1rem 0;
-        }
-        
-        .time-slider {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        .time-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--secondary);
-            cursor: pointer;
-            border: 2px solid white;
-        }
-        
-        .time-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: var(--gray-400);
-            margin-top: 0.5rem;
-        }
-        
-        /* 数据卡片展示区 */
-        .cards-view {
-            display: none;
-            flex: 1;
-            padding: 1.5rem;
-            overflow-y: auto;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            align-content: flex-start;
-        }
-        
-        .data-card {
-            background: rgba(17, 24, 39, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: var(--radius);
-            padding: 1.2rem;
-            width: calc(33.333% - 1rem);
-            min-width: 280px;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
-        }
-        
-        .data-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--secondary);
-        }
-        
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--secondary);
-        }
-        
-        .card-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0.5rem 0;
-            color: white;
-        }
-        
-        .card-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: var(--gray-400);
-        }
-        
-        /* 地图展示区 */
-        .map-view {
-            display: block;
-            flex: 1;
-            position: relative;
-        }
-        
-        #map-container {
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* 图例 */
-        .legend {
-            position: absolute;
-            bottom: 2rem;
-            left: 2rem;
-            background: rgba(17, 24, 39, 0.85);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: var(--radius);
-            padding: 1rem;
-            z-index: 10;
-            min-width: 200px;
-        }
-        
-        .legend-title {
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 0.75rem;
-            color: var(--secondary);
-        }
-        
-        .legend-gradient {
-            height: 20px;
-            width: 100%;
-            border-radius: 3px;
-            margin: 0.5rem 0;
-        }
-        
-        .legend-range {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--gray-400);
-        }
-        
-        /* 数据详情弹窗 */
-        .data-modal {
-            position: absolute;
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            z-index: 100;
-            min-width: 400px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            display: none;
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .modal-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--secondary);
-        }
-        
-        .close-modal {
-            background: transparent;
-            border: none;
-            color: var(--gray-400);
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-        
-        .close-modal:hover {
-            color: white;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.875rem;
-        }
-        
-        .data-table th {
-            text-align: left;
-            padding: 0.75rem 0.5rem;
-            color: var(--secondary);
-            font-weight: 500;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .data-table td {
-            padding: 0.75rem 0.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
-        
-        .data-table tr:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        /* 加载状态 */
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            background-color: var(--primary);
+            font-family: 'Segoe UI', "Microsoft YaHei", sans-serif;
+            color: var(--text);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1rem;
-            z-index: 1000;
+            min-height: 100vh;
+            /* 修改点：允许纵向滚动，隐藏横向滚动 */
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
         }
-        
-        .loader {
-            width: 48px;
-            height: 48px;
-            border: 5px solid rgba(255, 255, 255, 0.1);
-            border-bottom-color: var(--secondary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* 海洋要素可视化特效 */
-        .ocean-effect {
-            position: absolute;
-            pointer-events: none;
+
+        header { margin-top: 30px; text-align: center; z-index: 10; }
+        h1 { font-weight: 300; letter-spacing: 6px; color: #a69384; font-size: 1.8rem; }
+        .subtitle { font-size: 0.7rem; color: #c8b9ad; margin-top: 5px; letter-spacing: 2px; }
+
+        /* 盲盒展示区 */
+        #display-area {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px 20px 100px 20px; /* 增加底部间距 */
+            perspective: 1200px;
             z-index: 5;
-            opacity: 0.7;
-        }
-        
-        /* 工具提示 */
-        .tooltip {
-            position: absolute;
-            background: rgba(17, 24, 39, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            padding: 0.5rem 0.8rem;
-            font-size: 0.8rem;
-            pointer-events: none;
-            z-index: 50;
-            display: none;
-        }
-        
-        /* 响应式适配 */
-        @media (max-width: 1200px) {
-            .control-panel {
-                width: 280px;
-            }
-            .data-card {
-                width: calc(50% - 1rem);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .main-content {
-                flex-direction: column;
-            }
-            .control-panel {
-                width: 100%;
-                height: 200px;
-                border-right: none;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            }
-            .data-card {
-                width: 100%;
-            }
-            .navbar {
-                padding: 0.8rem 1rem;
-            }
-            .navbar-title {
-                font-size: 1rem;
-            }
         }
 
-        /* AI 聊天机器人悬浮窗样式 */
-.ai-fab {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    width: 50px;
-    height: 50px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(114, 46, 209, 0.4);
-    z-index: 1000;
-    transition: var(--transition);
-}
-.ai-fab:hover {
-    transform: scale(1.1);
-}
+        /* 吧唧组件样式 */
+        .badge-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            animation: badgeEntry 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
+            opacity: 0;
+        }
 
-.ai-chat-panel {
-    position: fixed;
-    bottom: 5rem;
-    right: 2rem;
-    width: 380px;
-    height: 500px;
-    background: rgba(17, 24, 39, 0.95);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    display: none;
-    flex-direction: column;
-    z-index: 999;
-    overflow: hidden;
-}
+        @keyframes badgeEntry {
+            0% { transform: scale(0.5) translateY(100px) rotateX(-30deg); opacity: 0; }
+            100% { transform: scale(1) translateY(0) rotateX(0); opacity: 1; }
+        }
 
-.chat-header {
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        .badge-frame {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: #fff;
+            padding: 10px;
+            box-shadow: var(--shadow);
+            display: flex; justify-content: center; align-items: center;
+            border: 1px solid #f0e6dd;
+        }
 
-.chat-header-title {
-    font-weight: 600;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+        .badge-inner {
+            position: relative;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #eee;
+        }
 
-.chat-messages {
-    flex: 1;
-    padding: 1rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
+        .result-img { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .paper-canvas { position: absolute; top: 0; left: 0; z-index: 5; cursor: crosshair; touch-action: none; }
+        .glossy {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 65%);
+            z-index: 10; pointer-events: none;
+        }
 
-.chat-input-area {
-    padding: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    gap: 0.5rem;
-}
+        /* 底部控制栏 */
+        .controls { 
+            position: fixed; /* 改为固定定位，防止随页面滚动 */
+            bottom: 40px; 
+            display: flex; 
+            gap: 20px; 
+            z-index: 100; 
+        }
+        button {
+            padding: 14px 30px; border: none; background: #fff; border-radius: 30px;
+            color: #a69384; cursor: pointer; box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9rem; letter-spacing: 2px; border: 1px solid #f0e6dd;
+        }
+        button:hover { transform: translateY(-5px); background: #fdfcfb; box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+        button:active { transform: scale(0.95); }
 
-.chat-input {
-    flex: 1;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    outline: none;
-}
+        /* 新增：侧边滑动导航样式 */
+        #side-nav {
+            position: fixed;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none; /* 默认隐藏 */
+            flex-direction: column;
+            gap: 15px;
+            z-index: 200;
+        }
 
-.chat-send-btn {
-    background: var(--accent);
-    border: none;
-    color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+        .nav-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #f0e6dd;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
 
-/* 消息气泡 */
-.msg-bubble {
-    max-width: 85%;
-    padding: 0.8rem 1rem;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-.msg-user {
-    align-self: flex-end;
-    background: var(--primary);
-    color: white;
-    border-bottom-right-radius: 2px;
-}
-
-.msg-ai {
-    align-self: flex-start;
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--light);
-    border-bottom-left-radius: 2px;
-}
-
-/* 思考过程灰色小字样式 */
-.think-process {
-    font-size: 0.8rem;
-    color: var(--gray-400);
-    margin-bottom: 0.8rem;
-    padding-bottom: 0.8rem;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    font-style: italic;
-    white-space: pre-wrap;
-}
-
-/* Markdown 渲染补丁 */
-.msg-ai p { margin-bottom: 0.5rem; }
-.msg-ai p:last-child { margin-bottom: 0; }
-.msg-ai strong { color: var(--secondary); }
+        .nav-btn:hover { background: #fff; transform: scale(1.1); }
+        .nav-btn:active { transform: scale(0.9); }
         
+        .nav-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: #a69384;
+        }
+
+        /* --- 3D 盲盒动画系统 --- */
+        #scene-3d {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; justify-content: center; align-items: center;
+            background: rgba(253, 250, 247, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 90; perspective: 1000px;
+        }
+
+        .box-3d {
+            width: 150px; height: 150px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-20deg) rotateY(25deg);
+            transition: transform 0.5s;
+        }
+
+        .box-face {
+            position: absolute; width: 150px; height: 150px;
+            background: var(--box-color);
+            border: 2px solid var(--box-border);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 40px; box-shadow: inset 0 0 20px rgba(166,147,132,0.1);
+        }
+
+        .face-front  { transform: rotateY(0deg) translateZ(75px); }
+        .face-back   { transform: rotateY(180deg) translateZ(75px); }
+        .face-left   { transform: rotateY(-90deg) translateZ(75px); }
+        .face-right  { transform: rotateY(90deg) translateZ(75px); }
+        .face-bottom { transform: rotateX(-90deg) translateZ(75px); background: #e0d0c0; }
+        .face-top    { 
+            transform: rotateX(90deg) translateZ(75px); 
+            transform-origin: bottom;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            background: #fff;
+        }
+
+        .shaking { animation: boxShake 0.15s infinite; }
+        @keyframes boxShake {
+            0% { transform: rotateX(-20deg) rotateY(25deg) translate(2px, 0); }
+            50% { transform: rotateX(-22deg) rotateY(27deg) translate(-2px, 1px); }
+            100% { transform: rotateX(-20deg) rotateY(25deg) translate(2px, 0); }
+        }
+
+        .box-open .face-top { transform: rotateX(90deg) translateZ(75px) rotateX(-120deg); }
+        .box-open { animation: boxPop 0.5s forwards; }
+        @keyframes boxPop {
+            0% { transform: scale(1) rotateX(-20deg) rotateY(25deg); }
+            50% { transform: scale(1.2) rotateX(-10deg) rotateY(10deg); }
+            100% { transform: scale(0) rotateX(0) rotateY(360deg); opacity: 0; }
+        }
+
+        .ribbon-v { position: absolute; width: 30px; height: 100%; background: #e8d5c4; left: 60px; }
+        .ribbon-h { position: absolute; width: 100%; height: 30px; background: #e8d5c4; top: 60px; }
+
+        .confetti {
+            position: absolute; width: 10px; height: 10px; z-index: 95;
+            animation: confettiFall 1.5s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) rotate(360deg); opacity: 0; }
+        }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- 顶部导航 -->
-        <div class="navbar">
-            <div class="navbar-title">
-                <i class="fa fa-cloud"></i>
-                <span>气象预测可视化平台</span>
-            </div>
-            <div class="view-controls">
-                <button class="view-btn active" id="btn-map" data-view="map">
-                    <i class="fa fa-map-o"></i>
-                    <span>地图视图</span>
-                </button>
-                <button class="view-btn" id="btn-cards" data-view="cards">
-                    <i class="fa fa-th"></i>
-                    <span>卡片视图</span>
-                </button>
-            </div>
-        </div>
-        
-        <!-- 主内容区 -->
-        <div class="main-content">
-            <!-- 左侧控制面板 -->
-            <div class="control-panel">
-                <div class="control-group">
-                    <div class="control-label">
-                        <i class="fa fa-bar-chart"></i>
-                        <span>气象指标</span>
-                    </div>
-                    <div class="variable-tabs" id="variable-tabs">
-                        <!-- 动态生成指标标签 -->
-                    </div>
-                </div>
-                
-                <div class="control-group">
-                    <div class="control-label">
-                        <i class="fa fa-clock-o"></i>
-                        <span>时间选择</span>
-                    </div>
-                    <div class="time-slider-container">
-                        <input type="range" class="time-slider" id="time-slider" min="0" max="0" value="0">
-                    </div>
-                    <div class="time-info">
-                        <span id="current-time">加载中...</span>
-                        <span id="time-range">0/0</span>
-                    </div>
-                </div>
-                
-                <div class="control-group">
-                    <div class="control-label">
-                        <i class="fa fa-info-circle"></i>
-                        <span>数据概览</span>
-                    </div>
-                    <div id="data-stats">
-                        <!-- 动态生成数据统计 -->
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 地图视图 -->
-            <div class="map-view" id="map-view">
-                <div id="map-container"></div>
-                
-                <!-- 图例 -->
-                <div class="legend">
-                    <div class="legend-title" id="legend-title">温度 (K)</div>
-                    <div class="legend-gradient" id="legend-gradient"></div>
-                    <div class="legend-range">
-                        <span id="legend-min">0</span>
-                        <span id="legend-max">30</span>
-                    </div>
-                </div>
-                
-                <!-- 海洋要素特效 -->
-                <div class="ocean-effect" id="ocean-effect"></div>
-            </div>
-            
-            <!-- 卡片视图 -->
-            <div class="cards-view" id="cards-view">
-                <!-- 动态生成数据卡片 -->
-            </div>
-            
-            <!-- 加载状态 -->
-            <div class="loading" id="loading">
-                <div class="loader"></div>
-                <span>加载数据中...</span>
-            </div>
-            
-            <!-- 数据详情弹窗 -->
-            <div class="data-modal" id="data-modal">
-                <div class="modal-header">
-                    <div class="modal-title">点位详细数据</div>
-                    <button class="close-modal" id="close-modal">&times;</button>
-                </div>
-                <table class="data-table" id="point-data-table">
-                    <thead>
-                        <tr>
-                            <th>时间</th>
-                            <th>纬度</th>
-                            <th>经度</th>
-                            <th>指标值</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- 动态生成数据 -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- 工具提示 -->
-            <div class="tooltip" id="tooltip"></div>
-        </div>
 
-        <!-- AI 悬浮按钮与聊天面板 -->
-        <div class="ai-fab" id="ai-fab" onclick="toggleChat()">
-            <i class="fa fa-commenting-o"></i>
+    <header>
+        <h1>往昔之局</h1>
+        <p class="subtitle">SWEET DREAM SERIES BLIND BOX</p>
+    </header>
+
+    <div id="display-area">
+        <div style="color: #d2c5bb; letter-spacing: 2px;">准备好开启你的惊喜了吗？</div>
+    </div>
+
+    <!-- 新增：滑动键 HTML -->
+    <div id="side-nav">
+        <div class="nav-btn" onclick="scrollPage('up')">
+            <svg viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>
         </div>
-        
-        <div class="ai-chat-panel" id="ai-chat-panel">
-            <div class="chat-header">
-                <div class="chat-header-title">
-                    <i class="fa fa-magic"></i> 气象AI助手
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <button class="close-modal" onclick="clearChat()" title="清空聊天记录">
-                        <i class="fa fa-trash-o"></i>
-                    </button>
-                    <button class="close-modal" onclick="toggleChat()">&times;</button>
-                </div>
-            </div>
-            <div class="chat-messages" id="chat-messages">
-                <div class="msg-bubble msg-ai">您好！我已经读取了未来的全局气象趋势数据。您可以问我诸如：“未来两周温度趋势如何？”或“哪天风速最大？”之类的问题。</div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="chat-input" class="chat-input" placeholder="询问天气状况..." onkeypress="handleChatEnter(event)">
-                <button class="chat-send-btn" onclick="sendChatMessage()">
-                    <i class="fa fa-paper-plane"></i>
-                </button>
+        <div class="nav-btn" onclick="scrollPage('down')">
+            <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="draw(1)">开启一个</button>
+        <button onclick="draw(5)">五连开启</button>
+    </div>
+
+    <div id="scene-3d">
+        <div id="box-container" class="box-3d">
+            <div class="box-face face-front"><div class="ribbon-v"></div>🎁</div>
+            <div class="box-face face-back"><div class="ribbon-v"></div></div>
+            <div class="box-face face-left"><div class="ribbon-h"></div></div>
+            <div class="box-face face-right"><div class="ribbon-h"></div></div>
+            <div class="box-face face-bottom"></div>
+            <div class="box-face face-top">
+                <div class="ribbon-v" style="left:60px; height:150px"></div>
+                <div class="ribbon-h" style="top:60px; width:150px"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        // ===================== 全局变量 =====================
-        let currentView = 'map';          // 当前视图：map/cards
-        let currentVariable = '';         // 当前选中的变量
-        let currentTimeIndex = 0;         // 当前时间索引
-        let metadata = null;              // 元数据
-        let weatherData = {};             // 缓存的气象数据
-        let validRegion = null;           // 有效数据区域
-        let globalVarStats = {};          // 存储每个变量的全局最大最小值
+<script>
+    const styles = [
+        { name: "1", img: "1.jpg", color: "#f8d7da" },
+        { name: "2", img: "2.jpg", color: "#d1ecf1" },
+        { name: "3", img: "3.jpg", color: "#d4edda" },
+        { name: "4", img: "4.jpg", color: "#fff3cd" },
+        { name: "5", img: "5.jpg", color: "#e2e3e5" },
+        { name: "6", img: "6.jpg", color: "#f3e5f5" },
+        { name: "7", img: "7.jpg", color: "#e8f5e9" },
+        { name: "8", img: "8.jpg", color: "#fffde7" },
+        { name: "9", img: "9.jpg", color: "#f0f4c3" },
+        { name: "10", img: "10.jpg", color: "#efebe9" }
+    ];
 
-        // Three.js 全局变量
-        let scene, camera, renderer, controls;
-        let mapPlane, dataPlane;
-        let dataTexture, dataMaterial;
-        let raycaster, mouse;
-        let mapContainer;
-        let animationFrameId;
+    const displayArea = document.getElementById('display-area');
+    const scene3d = document.getElementById('scene-3d');
+    const boxContainer = document.getElementById('box-container');
+    const sideNav = document.getElementById('side-nav');
 
-        // 颜色配置
-        const colorConfigs = {
-            'temperature_2m': { name: '2米温度 (K)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'pressure': { name: '气压 (Pa)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'rhum': { name: '相对湿度 (%)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'sst': { name: '海表面温度 (K)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            // 'wind_speed_10m': { name: '10米风速 (m/s)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            // 'current_speed': { name: '海流速度 (m/s)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'u10_wind': { name: '10米U风分量 (m/s)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'v10_wind': { name: '10米V风分量 (m/s)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'water_u': { name: '海流U分量 (m/s)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] },
-            'water_v': { name: '海流V分量 (m/s)', colors: ['#00008B', '#0033CC', '#0066FF', '#3399FF', '#66CCFF', '#99DDFF', '#CCEEFF', '#E5F5FF', '#FFFFCC', '#FFFF66', '#FFCC00', '#FF9900', '#FF6600', '#FF3300', '#FF0000', '#CC0000', '#990000'] }
+    // 新增：滚动控制函数
+    function scrollPage(dir) {
+        const distance = window.innerHeight * 0.6; // 每次滑动屏幕的60%
+        window.scrollBy({
+            top: dir === 'down' ? distance : -distance,
+            behavior: 'smooth'
+        });
+    }
+
+    // 新增：检测是否需要显示滑动键
+    function updateNavVisibility() {
+        if (document.documentElement.scrollHeight > window.innerHeight) {
+            sideNav.style.display = 'flex';
+        } else {
+            sideNav.style.display = 'none';
+        }
+    }
+
+    function draw(count) {
+        displayArea.innerHTML = '';
+        scene3d.style.display = 'flex';
+        boxContainer.className = 'box-3d shaking';
+
+        setTimeout(() => {
+            boxContainer.classList.remove('shaking');
+            boxContainer.classList.add('box-open');
+            createConfetti();
+
+            setTimeout(() => {
+                scene3d.style.display = 'none';
+                boxContainer.classList.remove('box-open');
+                
+                for(let i=0; i<count; i++) {
+                    const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+                    createBadge(randomStyle, i * 150);
+                }
+                
+                // 吧唧生成完毕后检查是否显示导航
+                setTimeout(updateNavVisibility, (count * 150) + 600);
+                
+            }, 600);
+        }, 1500);
+    }
+
+    function createConfetti() {
+        for (let i = 0; i < 50; i++) {
+            const el = document.createElement('div');
+            el.className = 'confetti';
+            el.style.left = '50%'; el.style.top = '50%';
+            el.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 80%)`;
+            const dx = (Math.random() - 0.5) * 600 + 'px';
+            const dy = (Math.random() - 0.5) * 600 - 200 + 'px';
+            el.style.setProperty('--dx', dx);
+            el.style.setProperty('--dy', dy);
+            scene3d.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+    }
+
+    function createBadge(style, delay) {
+        setTimeout(() => {
+            const container = document.createElement('div');
+            container.className = 'badge-container';
+            const badgeId = 'badge-' + Math.random().toString(36).substr(2, 9);
+            
+            container.innerHTML = `
+                <div class="badge-frame">
+                    <div class="badge-inner">
+                        <div style="width:100%;height:100%;background:${style.color};display:flex;align-items:center;justify-content:center;font-size:40px;color:rgba(0,0,0,0.1);position:absolute">?</div>
+                        <img class="result-img" src="${style.img}" onerror="this.style.display='none'">
+                        <canvas id="${badgeId}" class="paper-canvas" width="220" height="220"></canvas>
+                        <div class="glossy"></div>
+                    </div>
+                </div>
+            `;
+            displayArea.appendChild(container);
+            initTearLogic(badgeId);
+        }, delay);
+    }
+
+    function initTearLogic(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = 220;
+        
+        let isPressed = false;
+        let lastPos = null;
+        let currentRadius = 15;
+
+        function initPaper() {
+            ctx.fillStyle = '#f4f1ea'; 
+            ctx.fillRect(0, 0, size, size);
+            for(let i=0; i<300; i++) {
+                ctx.fillStyle = `rgba(0,0,0,${Math.random()*0.03})`;
+                ctx.fillRect(Math.random()*size, Math.random()*size, 1.2, 1.2);
+            }
+            ctx.strokeStyle = "#e8dacc";
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2.5, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.fillStyle = "#bcaaa4";
+            ctx.font = "bold 12px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("TAP & TEAR", size/2, size/2 + 5);
+        }
+
+        function getJaggedPath(x, y, radius) {
+            const points = [];
+            const segments = 12;
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const r = radius * (0.85 + Math.random() * 0.3);
+                points.push({ x: x + Math.cos(angle) * r, y: y + Math.sin(angle) * r });
+            }
+            return points;
+        }
+
+        function tear(x, y, targetRadius) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop'; 
+            ctx.fillStyle = '#ffffff'; 
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            const outerPath = getJaggedPath(x, y, targetRadius + 3);
+            ctx.beginPath(); ctx.moveTo(outerPath[0].x, outerPath[0].y);
+            outerPath.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath(); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = 'destination-out';
+            const innerPath = getJaggedPath(x, y, targetRadius);
+            ctx.beginPath(); ctx.moveTo(innerPath[0].x, innerPath[0].y);
+            innerPath.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+        }
+
+        const handleInteract = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            if (lastPos) {
+                const dx = x - lastPos.x;
+                const dy = y - lastPos.y;
+                const dist = Math.hypot(dx, dy);
+                let targetR = 20 - Math.min(dist * 0.4, 12); 
+                currentRadius += (targetR - currentRadius) * 0.3;
+                const steps = Math.ceil(dist / 3); 
+                for(let i=0; i<steps; i++) {
+                    const lx = lastPos.x + (dx * (i / steps));
+                    const ly = lastPos.y + (dy * (i / steps));
+                    tear(lx, ly, currentRadius + (Math.random()-0.5)*2);
+                }
+            } else {
+                tear(x, y, 18);
+            }
+            lastPos = { x, y };
         };
 
-        // ===================== 初始化函数 =====================
-        async function init() {
-            try {
-                await loadMetadata();
-                await calculateGlobalVarStats();
-                initViewSwitch();
-                initVariableTabs();
-                initTimeSlider();
-                
-                if (currentView === 'map') {
-                    initThreeJSMap();
-                }
-                
-                await loadTimeData(0);
-                document.getElementById('loading').style.display = 'none';
-            } catch (error) {
-                console.error('初始化失败:', error);
-                document.getElementById('loading').innerHTML = `<div>加载失败: ${error.message}</div>`;
-            }
-        }
+        canvas.addEventListener('mousedown', (e) => { isPressed = true; handleInteract(e); });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isPressed = true; handleInteract(e); });
+        window.addEventListener('mousemove', (e) => { if (isPressed) handleInteract(e); });
+        window.addEventListener('touchmove', (e) => { if (isPressed) handleInteract(e); });
+        window.addEventListener('mouseup', () => { isPressed = false; lastPos = null; });
+        window.addEventListener('touchend', () => { isPressed = false; lastPos = null; });
 
-        // 数据加载与处理
-        async function loadMetadata() {
-            const response = await axios.get('/api/metadata');
-            metadata = response.data;
-            if (metadata.error) throw new Error(metadata.error);
-            validRegion = metadata.valid_region;
-            document.getElementById('time-range').textContent = `0/${metadata.total_time_points - 1}`;
-            document.getElementById('time-slider').max = metadata.total_time_points - 1;
-        }
+        initPaper();
+    }
 
-        async function calculateGlobalVarStats() {
-            const variables = metadata.variables;
-            variables.forEach(varName => { globalVarStats[varName] = { min: Infinity, max: -Infinity }; });
-            
-            for (let i = 0; i < metadata.total_time_points; i++) {
-                try {
-                    const response = await axios.get(`/api/data/${i}`);
-                    const data = response.data;
-                    if (data.stats) {
-                        variables.forEach(varName => {
-                            if (data.stats[varName]) {
-                                globalVarStats[varName].min = Math.min(globalVarStats[varName].min, data.stats[varName].min);
-                                globalVarStats[varName].max = Math.max(globalVarStats[varName].max, data.stats[varName].max);
-                            }
-                        });
-                    }
-                } catch (e) { continue; }
-            }
-        }
-
-        async function loadTimeData(timeIndex) {
-            if (weatherData[timeIndex]) {
-                currentTimeIndex = timeIndex;
-                updateUI(weatherData[timeIndex]);
-                return;
-            }
-            const response = await axios.get(`/api/data/${timeIndex}`);
-            const data = response.data;
-            if (data.error) throw new Error(data.error);
-            weatherData[timeIndex] = data;
-            currentTimeIndex = timeIndex;
-            updateUI(data);
-        }
-
-        // UI 逻辑
-        function initViewSwitch() {
-            const viewButtons = document.querySelectorAll('.view-btn');
-            viewButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    viewButtons.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    currentView = btn.dataset.view;
-                    document.getElementById('map-view').style.display = currentView === 'map' ? 'block' : 'none';
-                    document.getElementById('cards-view').style.display = currentView === 'cards' ? 'flex' : 'none';
-                    
-                    if (currentView === 'map' && !window.mapInitialized) {
-                        initThreeJSMap();
-                        if (weatherData[currentTimeIndex]) updateMapView(weatherData[currentTimeIndex]);
-                    }
-                    if (weatherData[currentTimeIndex]) updateUI(weatherData[currentTimeIndex]);
-                });
-            });
-        }
-
-        function initVariableTabs() {
-            const tabsContainer = document.getElementById('variable-tabs');
-            const variables = metadata.variables;
-            currentVariable = variables[0];
-            
-            variables.forEach(varName => {
-                const config = colorConfigs[varName] || { name: varName, colors: ['#0000FF', '#FF0000'] };
-                const tab = document.createElement('div');
-                tab.className = `var-tab ${varName === currentVariable ? 'active' : ''}`;
-                tab.dataset.var = varName;
-                tab.textContent = config.name || varName;
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.var-tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentVariable = varName;
-                    if (weatherData[currentTimeIndex]) updateUI(weatherData[currentTimeIndex]);
-                });
-                tabsContainer.appendChild(tab);
-            });
-        }
-
-        function initTimeSlider() {
-            const slider = document.getElementById('time-slider');
-            slider.addEventListener('input', async (e) => {
-                const newIndex = parseInt(e.target.value);
-                if (newIndex !== currentTimeIndex) {
-                    await loadTimeData(newIndex);
-                    document.getElementById('current-time').textContent = metadata.time_points[newIndex].time;
-                    document.getElementById('time-range').textContent = `${newIndex}/${metadata.total_time_points - 1}`;
-                }
-            });
-        }
-
-        // ===================== Three.js 2D 核心模块 =====================
-        function initThreeJSMap() {
-            window.mapInitialized = true;
-            mapContainer = document.getElementById('map-container');
-            const width = mapContainer.clientWidth;
-            const height = mapContainer.clientHeight;
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a192f); // 深色背景
-
-            // 采用正交相机，确保完美的 2D 渲染体验
-            const aspect = width / height;
-            const viewHeight = 180; // 世界地图维度 (-90 到 90)
-            camera = new THREE.OrthographicCamera(-viewHeight * aspect / 2, viewHeight * aspect / 2, viewHeight / 2, -viewHeight / 2, 0.1, 1000);
-            
-            // 定位相机到数据区域中心
-            const region = validRegion || { lon_min: -180, lon_max: 180, lat_min: -90, lat_max: 90 };
-            const centerLon = (region.lon_min + region.lon_max) / 2;
-            const centerLat = (region.lat_min + region.lat_max) / 2;
-            camera.position.set(centerLon, centerLat, 10);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(width, height);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            mapContainer.appendChild(renderer.domElement);
-
-            // 交互控制
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableRotate = false; // 完全禁用旋转，维持 2D 效果
-            controls.enablePan = true;     // 允许鼠标拖拽平移
-            controls.enableZoom = true;    // 允许缩放
-            controls.target.set(centerLon, centerLat, 0);
-            // 鼠标按钮映射：左键/右键均可平移
-            controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-
-            // 1. 全球底图平面 (宽360, 高180, 1单位=1度)
-            const mapGeo = new THREE.PlaneGeometry(360, 180);
-            const textureLoader = new THREE.TextureLoader();
-            const mapMaterial = new THREE.MeshBasicMaterial({ color: 0x1E293B }); 
-            // 加载世界地图贴图（暗黑风格贴图）
-            textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r132/examples/textures/planets/earth_atmos_2048.jpg', (tex) => {
-                mapMaterial.map = tex;
-                mapMaterial.color.setHex(0xffffff);
-                mapMaterial.needsUpdate = true;
-            });
-            mapPlane = new THREE.Mesh(mapGeo, mapMaterial);
-            scene.add(mapPlane);
-
-            // 2. 数据热力图层平面 (根据 validRegion 动态裁剪大小)
-            const regionWidth = region.lon_max - region.lon_min;
-            const regionHeight = region.lat_max - region.lat_min;
-            const dataGeo = new THREE.PlaneGeometry(regionWidth, regionHeight);
-            
-            dataMaterial = new THREE.MeshBasicMaterial({
-                transparent: true, 
-                opacity: 0.85, 
-                side: THREE.FrontSide,
-                blending: THREE.NormalBlending
-            });
-            dataPlane = new THREE.Mesh(dataGeo, dataMaterial);
-            // 放置在对应经纬度的位置，略高于底图
-            dataPlane.position.set(centerLon, centerLat, 0.1);
-            scene.add(dataPlane);
-
-            // 工具类
-            raycaster = new THREE.Raycaster();
-            mouse = new THREE.Vector2();
-
-            // 绑定交互事件
-            renderer.domElement.addEventListener('mousemove', onMapMouseMove);
-            renderer.domElement.addEventListener('contextmenu', onMapRightClick);
-            window.addEventListener('resize', () => {
-                if(!mapContainer) return;
-                const w = mapContainer.clientWidth;
-                const h = mapContainer.clientHeight;
-                const newAspect = w / h;
-                camera.left = -viewHeight * newAspect / 2;
-                camera.right = viewHeight * newAspect / 2;
-                camera.top = viewHeight / 2;
-                camera.bottom = -viewHeight / 2;
-                camera.updateProjectionMatrix();
-                renderer.setSize(w, h);
-            });
-
-            // 动画循环
-            const animate = function() {
-                animationFrameId = requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            };
-            animate();
-        }
-
-        // 核心渲染：计算热力图贴图
-        function updateMapView(data) {
-            if (!scene || !data || !data.data_points) return;
-            
-            const config = colorConfigs[currentVariable] || { colors: ['#0000FF', '#FF0000'] };
-            const varStats = globalVarStats[currentVariable];
-            const minVal = varStats.min;
-            const maxVal = varStats.max;
-            
-            const region = validRegion || { lon_min: -180, lon_max: 180, lat_min: -90, lat_max: 90 };
-            const regionWidth = region.lon_max - region.lon_min;
-            const regionHeight = region.lat_max - region.lat_min;
-
-            // Canvas分辨率控制：长边像素量，影响平滑度和计算性能
-            const MAX_RES = 150; 
-            const canvasWidth = Math.floor(regionWidth > regionHeight ? MAX_RES : MAX_RES * (regionWidth / regionHeight));
-            const canvasHeight = Math.floor(regionHeight > regionWidth ? MAX_RES : MAX_RES * (regionHeight / regionWidth));
-
-            const canvas = document.createElement('canvas');
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
-            const ctx = canvas.getContext('2d');
-            const imgData = ctx.createImageData(canvasWidth, canvasHeight);
-
-            // 准备数据字典加速查找
-            const points = data.data_points;
-            const searchRadiusSq = 2.0 * 2.0; // IDW插值搜索半径(平方)
-
-            // 在 Canvas 生成平滑热力像素
-            for (let y = 0; y < canvasHeight; y++) {
-                // Canvas的 y=0 代表最顶端，对应 lat_max
-                const lat = region.lat_max - (y / (canvasHeight - 1)) * regionHeight;
-                
-                for (let x = 0; x < canvasWidth; x++) {
-                    const lon = region.lon_min + (x / (canvasWidth - 1)) * regionWidth;
-                    
-                    // 使用反距离加权(IDW)计算当前像素的值
-                    let num = 0, den = 0, hasData = false;
-                    for (let i = 0; i < points.length; i++) {
-                        const p = points[i];
-                        const v = p[currentVariable];
-                        if (v === null || v === undefined) continue;
-
-                        const distSq = (p.lat - lat)**2 + (p.lon - lon)**2;
-                        if (distSq < 0.0001) {
-                            num = v; den = 1; hasData = true; break; // 精确命中
-                        }
-                        if (distSq < searchRadiusSq) {
-                            const weight = 1.0 / distSq; // IDW 权重
-                            num += weight * v;
-                            den += weight;
-                            hasData = true;
-                        }
-                    }
-
-                    const idx = (y * canvasWidth + x) * 4;
-                    if (hasData && den > 0) {
-                        const val = num / den;
-                        // 将数值映射到 0~1 然后取色
-                        const normalized = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
-                        const color = getColorObjFromScale(normalized, config.colors);
-                        
-                        imgData.data[idx] = color.r;
-                        imgData.data[idx+1] = color.g;
-                        imgData.data[idx+2] = color.b;
-                        imgData.data[idx+3] = 200; // Alpha 透明度
-                    } else {
-                        imgData.data[idx+3] = 0; // 无数据区域完全透明
-                    }
-                }
-            }
-            
-            ctx.putImageData(imgData, 0, 0);
-
-            // 更新 Three.js 材质贴图
-            if (dataTexture) dataTexture.dispose();
-            dataTexture = new THREE.CanvasTexture(canvas);
-            dataTexture.minFilter = THREE.LinearFilter;  // 开启线性过滤实现平滑
-            dataTexture.magFilter = THREE.LinearFilter;
-            
-            dataMaterial.map = dataTexture;
-            dataMaterial.needsUpdate = true;
-        }
-
-        // 射线检测：屏幕坐标转换经纬度
-        function getCoordinatesFromMouse(event) {
-            const rect = mapContainer.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / mapContainer.clientWidth) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / mapContainer.clientHeight) * 2 + 1;
-            
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(dataPlane);
-            
-            if (intersects.length > 0) {
-                const region = validRegion || { lon_min: -180, lon_max: 180, lat_min: -90, lat_max: 90 };
-                const uv = intersects[0].uv;
-                // UV映射：uv.x 0->1 对应 lon_min->lon_max; uv.y 0->1 对应 lat_min->lat_max
-                const lon = region.lon_min + uv.x * (region.lon_max - region.lon_min);
-                const lat = region.lat_min + uv.y * (region.lat_max - region.lat_min);
-                return { lat, lon };
-            }
-            return null;
-        }
-
-        // 事件监听逻辑
-        function onMapMouseMove(event) {
-            const tooltip = document.getElementById('tooltip');
-            const coords = getCoordinatesFromMouse(event);
-            
-            if (coords) {
-                tooltip.style.display = 'block';
-                tooltip.style.left = (event.clientX + 10) + 'px';
-                tooltip.style.top = (event.clientY + 10) + 'px';
-                tooltip.innerHTML = `纬度: ${coords.lat.toFixed(2)}°<br>经度: ${coords.lon.toFixed(2)}°<br>右键查看详细数据`;
-            } else {
-                tooltip.style.display = 'none';
-            }
-        }
-
-        function onMapRightClick(event) {
-            event.preventDefault();
-            const coords = getCoordinatesFromMouse(event);
-            
-            if (coords && weatherData[currentTimeIndex]) {
-                const { lat, lon } = coords;
-                const currentData = weatherData[currentTimeIndex];
-                let closestPoint = null;
-                let minDistance = Infinity;
-                
-                currentData.data_points.forEach(p => {
-                    const distSq = (p.lat - lat)**2 + (p.lon - lon)**2;
-                    if (distSq < minDistance) {
-                        minDistance = distSq;
-                        closestPoint = p;
-                    }
-                });
-                
-                if (closestPoint) showPointDataModal(lat, lon, closestPoint);
-            }
-        }
-
-        // ===================== UI 辅助渲染逻辑 =====================
-        function updateUI(data) {
-            document.getElementById('current-time').textContent = data.time;
-            updateDataStats(data.stats);
-            
-            if (currentView === 'map') updateMapView(data);
-            else if (currentView === 'cards') updateCardsView(data);
-            
-            updateLegend();
-            updateOceanEffects(data);
-        }
-
-        function updateDataStats(stats) {
-            const statsContainer = document.getElementById('data-stats');
-            const config = colorConfigs[currentVariable] || { name: currentVariable };
-            if (!stats[currentVariable]) return;
-            const stat = stats[currentVariable];
-            
-            statsContainer.innerHTML = `
-                <div style="margin-bottom: 0.5rem;">
-                    <span style="color: var(--gray-400);">当前指标:</span>
-                    <span style="color: var(--secondary);">${config.name}</span>
-                </div>
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <div style="flex: 1;"><div style="font-size: 0.8rem; color: var(--gray-400);">最小值</div><div style="font-size: 1.2rem; font-weight: 600;">${stat.min.toFixed(2)}</div></div>
-                    <div style="flex: 1;"><div style="font-size: 0.8rem; color: var(--gray-400);">最大值</div><div style="font-size: 1.2rem; font-weight: 600;">${stat.max.toFixed(2)}</div></div>
-                    <div style="flex: 1;"><div style="font-size: 0.8rem; color: var(--gray-400);">平均值</div><div style="font-size: 1.2rem; font-weight: 600;">${stat.mean.toFixed(2)}</div></div>
-                </div>
-                <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--gray-400);">
-                    全局范围: ${globalVarStats[currentVariable].min.toFixed(2)} ~ ${globalVarStats[currentVariable].max.toFixed(2)}
-                </div>
-            `;
-        }
-
-        function updateCardsView(data) {
-            const cardsContainer = document.getElementById('cards-view');
-            const config = colorConfigs[currentVariable] || { name: currentVariable };
-            const varStats = globalVarStats[currentVariable];
-            
-            const values = data.data_points.map(p => p[currentVariable]).filter(v => v !== null && v !== undefined);
-            if(values.length === 0) return;
-            
-            const minVal = Math.min(...values);
-            const maxVal = Math.max(...values);
-            const meanVal = values.reduce((sum, val) => sum + val, 0) / values.length;
-            
-            cardsContainer.innerHTML = `
-                <div class="data-card">
-                    <div class="card-header"><div class="card-title">${config.name}</div><i class="fa fa-thermometer-half"></i></div>
-                    <div class="card-value">${meanVal.toFixed(2)}</div>
-                    <div class="card-meta"><span>平均值</span><span>${data.time}</span></div>
-                </div>
-                <div class="data-card">
-                    <div class="card-header"><div class="card-title">最大值</div><i class="fa fa-arrow-up"></i></div>
-                    <div class="card-value" style="color: var(--warning);">${maxVal.toFixed(2)}</div>
-                    <div class="card-meta"><span>最高值 (全局: ${varStats.max.toFixed(2)})</span><span>实时极值</span></div>
-                </div>
-                <div class="data-card">
-                    <div class="card-header"><div class="card-title">最小值</div><i class="fa fa-arrow-down"></i></div>
-                    <div class="card-value" style="color: var(--secondary);">${minVal.toFixed(2)}</div>
-                    <div class="card-meta"><span>最低值 (全局: ${varStats.min.toFixed(2)})</span><span>实时极值</span></div>
-                </div>
-            `;
-        }
-
-        function updateLegend() {
-            const config = colorConfigs[currentVariable];
-            const varStats = globalVarStats[currentVariable];
-            document.getElementById('legend-title').textContent = config.name;
-            document.getElementById('legend-min').textContent = varStats.min.toFixed(2);
-            document.getElementById('legend-max').textContent = varStats.max.toFixed(2);
-            document.getElementById('legend-gradient').style.background = `linear-gradient(to right, ${config.colors.join(', ')})`;
-        }
-
-        function updateOceanEffects(data) {
-            const oceanEffect = document.getElementById('ocean-effect');
-            if (currentVariable === 'sst' || currentVariable === 'current_speed' || currentVariable.includes('water')) {
-                oceanEffect.style.display = 'block';
-                oceanEffect.style.background = `radial-gradient(circle at ${Math.random()*100}% ${Math.random()*100}%, rgba(22, 93, 255, 0.1) 0%, transparent 70%)`;
-            } else { oceanEffect.style.display = 'none'; }
-        }
-
-        function showPointDataModal(lat, lon, pointData) {
-            const modal = document.getElementById('data-modal');
-            const tableBody = document.querySelector('#point-data-table tbody');
-            document.querySelector('.modal-title').textContent = `${weatherData[currentTimeIndex].time} - 点位详情`;
-            
-            modal.style.left = (window.innerWidth / 2 - 200) + 'px';
-            modal.style.top = (window.innerHeight / 2 - 200) + 'px';
-            
-            tableBody.innerHTML = '';
-            if (pointData) {
-                metadata.variables.forEach(varName => {
-                    const value = pointData[varName];
-                    if (value !== undefined && value !== null) {
-                        const name = colorConfigs[varName]?.name || varName;
-                        tableBody.innerHTML += `<tr><td>${name}</td><td style="color: white; font-weight: bold;">${value.toFixed(2)}</td></tr>`;
-                    }
-                });
-                tableBody.innerHTML += `<tr><td style="color: var(--gray-400);">实际匹配网格</td><td style="color: var(--gray-400);">${pointData.lat.toFixed(2)}°N, ${pointData.lon.toFixed(2)}°E</td></tr>`;
-            }
-            
-            modal.style.display = 'block';
-            document.getElementById('close-modal').onclick = () => modal.style.display = 'none';
-        }
-
-        // ===================== 色彩计算辅助函数 =====================
-        function getColorObjFromScale(t, colors) {
-            if (t <= 0) return hexToRgb(colors[0]);
-            if (t >= 1) return hexToRgb(colors[colors.length - 1]);
-            
-            const segment = 1 / (colors.length - 1);
-            const index = Math.floor(t / segment);
-            const localT = (t - index * segment) / segment;
-            
-            const c1 = hexToRgb(colors[index]);
-            const c2 = hexToRgb(colors[index + 1]);
-            
-            return {
-                r: Math.round(c1.r + (c2.r - c1.r) * localT),
-                g: Math.round(c1.g + (c2.g - c1.g) * localT),
-                b: Math.round(c1.b + (c2.b - c1.b) * localT)
-            };
-        }
-
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r: 0, g: 0, b: 0};
-        }
-
-        // ===================== AI 聊天逻辑 =====================
-        function toggleChat() {
-            const panel = document.getElementById('ai-chat-panel');
-            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
-        }
-        // 清空聊天记录 + 清空上下文
-        function clearChat() {
-            // 清空前端聊天界面
-            document.getElementById('chat-messages').innerHTML = `
-                <div class="msg-bubble msg-ai">您好！我已经读取了未来的全局气象趋势数据。您可以问我诸如：“未来两周温度趋势如何？”或“哪天风速最大？”之类的问题。</div>
-            `;
-            // 调用后端清空用户上下文
-            axios.post('/api/clear-context', {});
-        }
-
-        function handleChatEnter(event) {
-            if (event.key === 'Enter') {
-                sendChatMessage();
-            }
-        }
-
-        async function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            const message = input.value.trim();
-            if (!message) return;
-
-            const chatMessages = document.getElementById('chat-messages');
-
-            // 添加用户消息
-            chatMessages.innerHTML += `<div class="msg-bubble msg-user">${message}</div>`;
-            input.value = '';
-            
-            // 添加一个等待动画
-            const loadingId = 'loading-' + Date.now();
-            chatMessages.innerHTML += `<div id="${loadingId}" class="msg-bubble msg-ai"><i class="fa fa-spinner fa-spin"></i> 正在思考...</div>`;
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            try {
-                // 向后端请求
-                const response = await axios.post('/api/chat', { message: message });
-                let content = response.data.content;
-                
-                // 移除等待动画
-                document.getElementById(loadingId).remove();
-
-                // 使用正则表达式解析思考过程：提取 <think>...</think> 中间的内容
-                const thinkRegex = /<think>([\s\S]*?)<\/think>/i;
-                const match = content.match(thinkRegex);
-                
-                let thinkHTML = '';
-                let finalAnswer = content;
-
-                if (match) {
-                    // 提取出思考内容
-                    const thinkText = match[1].trim();
-                    // 将提取的内容套上灰色小字的 div
-                    thinkHTML = `<div class="think-process"><i class="fa fa-lightbulb-o"></i> 思考过程：\n${thinkText}</div>`;
-                    // 从原文中剥离 <think> 标签及其内容，剩下的就是正式回答
-                    finalAnswer = content.replace(thinkRegex, '').trim();
-                }
-
-                // 使用 marked.js 将回答渲染为 Markdown
-                const parsedAnswer = marked.parse(finalAnswer);
-
-                // 将思考过程（HTML）和正式回答（Markdown）组合渲染
-                chatMessages.innerHTML += `
-                    <div class="msg-bubble msg-ai">
-                        ${thinkHTML}
-                        <div class="ai-answer-md">${parsedAnswer}</div>
-                    </div>
-                `;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            } catch (error) {
-                document.getElementById(loadingId).remove();
-                chatMessages.innerHTML += `<div class="msg-bubble msg-ai" style="color: var(--danger);">发生错误：${error.response?.data?.error || error.message}</div>`;
-            }
-        }
-
-        // ===================== 启动应用 =====================
-        window.addEventListener('load', init);
-
-        window.addEventListener('click', (e) => {
-            const modal = document.getElementById('data-modal');
-            if (e.target === modal) modal.style.display = 'none';
-        });
-    </script>
+    // 窗口大小变化时也检查一下
+    window.addEventListener('resize', updateNavVisibility);
+</script>
 </body>
 </html>
